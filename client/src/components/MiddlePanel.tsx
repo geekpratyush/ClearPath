@@ -56,13 +56,13 @@ export default function MiddlePanel() {
 
   useEffect(() => {
     if (monaco) {
-      monaco.languages.typescript.javascriptDefaults.setDiagnosticsOptions({
+      (monaco.languages.typescript as any).javascriptDefaults.setDiagnosticsOptions({
         noSemanticValidation: false,
         noSyntaxValidation: false,
       });
 
-      monaco.languages.typescript.javascriptDefaults.setCompilerOptions({
-        target: monaco.languages.typescript.ScriptTarget.ES2020,
+      (monaco.languages.typescript as any).javascriptDefaults.setCompilerOptions({
+        target: (monaco.languages.typescript as any).ScriptTarget.ES2020,
         allowNonTsExtensions: true,
       });
       
@@ -79,7 +79,7 @@ export default function MiddlePanel() {
         declare function replaceContext(newContext: any): void;
       `;
 
-      monaco.languages.typescript.javascriptDefaults.addExtraLib(typeDef, 'ts:filename/context.d.ts');
+      (monaco.languages.typescript as any).javascriptDefaults.addExtraLib(typeDef, 'ts:filename/context.d.ts');
     }
   }, [monaco, activeContext]);
 

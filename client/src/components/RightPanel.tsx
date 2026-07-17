@@ -1,13 +1,12 @@
-import React, { useState, useCallback } from 'react';
-import { useStore, type ContextData, type PipelineStatus } from '../store/useStore';
+import React from 'react';
+import { useStore, type PipelineStatus } from '../store/useStore';
 import { Play, Download, Image as ImageIcon, FileJson, PlayCircle } from 'lucide-react';
-import { ReactFlow, MiniMap, Controls, Background, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import { Parser } from 'expr-eval';
+
 
 export default function RightPanel() {
-  const { initialContext, activeContext, stages, isSimulating, updateStageStatus, resetSimulation, theme } = useStore();
-  const [isExporting, setIsExporting] = useState(false);
+  const { initialContext, stages, isSimulating, updateStageStatus, resetSimulation, theme } = useStore();
 
   // Generate nodes from stages for React Flow
   const initialNodes = stages.map((stage, index) => ({

@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Activity, Settings, Database, SlidersHorizontal, Code, Upload, Download } from 'lucide-react';
+import { Database, SlidersHorizontal, Code, Upload, Download } from 'lucide-react';
 
 export default function LeftPanel() {
   const [activeTab, setActiveTab] = useState<'json' | 'form'>('form');
@@ -48,7 +48,8 @@ export default function LeftPanel() {
   };
 
   const renderFormFields = (obj: any, path = '') => {
-    return Object.entries(obj).map(([key, value]) => {
+    return Object.entries(obj).map(([key, rawValue]) => {
+      const value = rawValue as any;
       const currentPath = path ? `${path}.${key}` : key;
       const type = typeof value;
 

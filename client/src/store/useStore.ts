@@ -4,12 +4,12 @@ import { persist } from 'zustand/middleware';
 export type PipelineStatus = 'idle' | 'processing' | 'passed' | 'breached' | 'amber';
 
 export interface ContextData {
-  clearing: {
+  clearing?: {
     system: string;
     country: string;
     isOpen: boolean;
   };
-  limits: {
+  limits?: {
     pool: number;
     facility: number;
     sublimit: {
@@ -19,7 +19,7 @@ export interface ContextData {
     dodl: number;
     eligibility: boolean;
   };
-  transaction: {
+  transaction?: {
     amount: number;
     currency: string;
     valueDate: string;
@@ -181,7 +181,7 @@ const setNestedProperty = (obj: any, path: string, value: any) => {
 
 export const useStore = create<StoreState>()(
   persist(
-    (set, get) => ({
+    (set) => ({
       initialContext: defaultContext,
       activeContext: defaultContext,
       stages: defaultStages,
