@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { ChevronDown, ArrowUp, ArrowDown, Plus, Play, CheckCircle2, XCircle, AlertCircle, Clock, Upload, Download, Layers, Code, LayoutTemplate, Maximize2, Minimize2, ChevronsUpDown, ChevronsDownUp, AlignJustify, Lock, Unlock, MessageSquareText } from 'lucide-react';
+import { ChevronDown, ArrowUp, ArrowDown, Plus, Play, CheckCircle2, XCircle, AlertCircle, Clock, Upload, Download, Layers, Code, LayoutTemplate, Maximize2, Minimize2, ChevronsUpDown, ChevronsDownUp, AlignJustify, MessageSquareText } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';

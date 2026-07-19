@@ -177,7 +177,7 @@ export default function LeftPanel() {
     return (
       <div className="space-y-2">
         {Object.entries(obj).map(([key, value]) => {
-          const isGroup = typeof value === 'object' && value !== null && value._type === undefined;
+          const isGroup = typeof value === 'object' && value !== null && (value as any)._type === undefined;
           return (
             <div 
               key={key} 
@@ -243,7 +243,7 @@ export default function LeftPanel() {
                   <span className="text-sm text-slate-300 font-medium">{key}</span>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase">{isGroup ? 'group' : value?._type || typeof value}</span>
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase">{isGroup ? 'group' : (value as any)?._type || typeof value}</span>
                   <button 
                     onClick={() => {
                       const newContext = JSON.parse(JSON.stringify(initialContext));

@@ -1,6 +1,6 @@
-import React, { useCallback, useRef, useEffect } from 'react';
+import { useCallback, useRef, useEffect } from 'react';
 import { useStore, type PipelineStatus } from '../store/useStore';
-import { Play, Download, Image as ImageIcon, FileJson, PlayCircle } from 'lucide-react';
+import { Play, Image as ImageIcon, FileJson, PlayCircle } from 'lucide-react';
 import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position, useReactFlow, ReactFlowProvider, getNodesBounds, getViewportForBounds } from '@xyflow/react';
 import { toPng, toSvg } from 'html-to-image';
 import dagre from 'dagre';
@@ -143,8 +143,8 @@ function FlowPanel() {
 
     const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges);
     
-    setNodes([...layoutedNodes]);
-    setEdges([...layoutedEdges]);
+    setNodes([...layoutedNodes] as any);
+    setEdges([...layoutedEdges] as any);
 
     // Delay fitView slightly to ensure React Flow has rendered the new positions
     setTimeout(() => {
@@ -245,7 +245,8 @@ function FlowPanel() {
       imageWidth,
       imageHeight,
       0.5,
-      2
+      2,
+      0.1
     );
 
     const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;

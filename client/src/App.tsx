@@ -4,7 +4,7 @@ import MiddlePanel from './components/MiddlePanel';
 import RightPanel from './components/RightPanel';
 import HelpModal from './components/HelpModal';
 import DocumentationModal from './components/DocumentationModal';
-import { ShieldCheck, Moon, Sun, HelpCircle, Download, Upload, Bot, Database, BookOpen } from 'lucide-react';
+import { Moon, Sun, HelpCircle, Upload, Bot, Database, BookOpen } from 'lucide-react';
 import { useStore } from './store/useStore';
 import { useRef } from 'react';
 import { ErrorBoundary } from './components/ErrorBoundary';

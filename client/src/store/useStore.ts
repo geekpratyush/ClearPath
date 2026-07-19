@@ -4,28 +4,9 @@ import { persist } from 'zustand/middleware';
 export type PipelineStatus = 'idle' | 'processing' | 'passed' | 'breached' | 'amber';
 
 export interface ContextData {
-  clearing?: {
-    system: string;
-    country: string;
-    isOpen: boolean;
-  };
-  limits?: {
-    pool: number;
-    facility: number;
-    sublimit: {
-      available: number;
-      functionalRestriction: string;
-    };
-    dodl: number;
-    eligibility: boolean;
-  };
-  transaction?: {
-    amount: number;
-    currency: string;
-    valueDate: string;
-    senderBic: string;
-    receiverBic: string;
-  };
+  clearing?: Record<string, any>;
+  limits?: Record<string, any>;
+  transaction?: Record<string, any>;
   [key: string]: any; // Allow dynamic mutation
 }
 
