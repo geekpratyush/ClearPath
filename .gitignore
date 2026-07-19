@@ -7,3 +7,7 @@ client/node_modules/
 client/dist/
 client/build/
 client/.env
+
+# LinkedIn marketing outputs (local only)
+marketing/ClearPath_LinkedIn_Carousel.pdf
+marketing/ClearPath_LinkedIn_Post.md

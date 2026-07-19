@@ -1,5 +1,5 @@
 import { useRef, useEffect, useState } from 'react';
-import { ChevronDown, Plus, Play, CheckCircle2, XCircle, AlertCircle, Clock, Upload, Download, Layers, Code, LayoutTemplate, Maximize2, Minimize2 } from 'lucide-react';
+import { ChevronDown, ArrowUp, ArrowDown, Plus, Play, CheckCircle2, XCircle, AlertCircle, Clock, Upload, Download, Layers, Code, LayoutTemplate, Maximize2, Minimize2, ChevronsUpDown, ChevronsDownUp, AlignJustify, Lock, Unlock, MessageSquareText } from 'lucide-react';
 import { useStore } from '../store/useStore';
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
@@ -26,13 +26,16 @@ const statusIcons: any = {
 };
 
 export default function MiddlePanel() {
-  const { stages, updateStageExpression, updateStageName, addStage, removeStage, moveStage, importPipeline, activeContext, theme } = useStore();
+  const { stages, updateStageExpression, updateStageName, updateStageDescription, setStageApprovalState, updateStageShape, addStage, removeStage, moveStage, importPipeline, activeContext, theme } = useStore();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const monaco = useMonaco();
   const [activeTab, setActiveTab] = useState<'visual' | 'json'>('visual');
   const [pipelineJsonText, setPipelineJsonText] = useState(JSON.stringify(stages, null, 2));
 
   const [maximizedStages, setMaximizedStages] = useState<Record<string, boolean>>({});
+  const [collapsedStages, setCollapsedStages] = useState<Record<string, boolean>>({});
+  const [collapsedOutputs, setCollapsedOutputs] = useState<Record<string, boolean>>({});
+  const [showReq, setShowReq] = useState<Record<string, boolean>>({});
 
   // Sync json text when stages change from visual mode
   useEffect(() => {
@@ -40,6 +43,26 @@ export default function MiddlePanel() {
       setPipelineJsonText(JSON.stringify(stages, null, 2));
     }
   }, [stages, activeTab]);
+
+  const handleExpandAll = () => {
+    setCollapsedStages({});
+    setCollapsedOutputs({});
+    setMaximizedStages({});
+  };
+
+  const handleCollapseAll = () => {
+    const allCollapsed: Record<string, boolean> = {};
+    stages.forEach(s => allCollapsed[s.id] = true);
+    setCollapsedStages(allCollapsed);
+  };
+
+  const handleCompact = () => {
+    const allOutputsCollapsed: Record<string, boolean> = {};
+    stages.forEach(s => allOutputsCollapsed[s.id] = true);
+    setCollapsedStages({}); // expand all stages
+    setCollapsedOutputs(allOutputsCollapsed); // hide outputs
+    setMaximizedStages({});
+  };
 
   const handlePipelineJsonChange = (val: string | undefined) => {
     const text = val || '';
@@ -66,11 +89,19 @@ export default function MiddlePanel() {
         allowNonTsExtensions: true,
       });
       
+      // Merge active context with all available output contexts from simulation runs
+      let mergedContext = { ...activeContext };
+      stages.forEach(stage => {
+        if (stage.outputContext) {
+          mergedContext = { ...mergedContext, ...stage.outputContext };
+        }
+      });
+      
       const typeDef = `
         /** 
          * Global Context Object for Pipeline Execution 
          */
-        declare var context: ${JSON.stringify(activeContext, null, 2)};
+        declare var context: ${JSON.stringify(mergedContext, null, 2)};
         
         /**
          * Replaces the entire root context object with a new object structure.
@@ -79,9 +110,14 @@ export default function MiddlePanel() {
         declare function replaceContext(newContext: any): void;
       `;
 
-      (monaco.languages.typescript as any).javascriptDefaults.addExtraLib(typeDef, 'ts:filename/context.d.ts');
+      // Clear previous extra libs to prevent duplicates when context updates
+      (monaco.languages.typescript as any).javascriptDefaults.getExtraLibs();
+      (monaco.languages.typescript as any).javascriptDefaults.setExtraLibs([{
+        content: typeDef,
+        filePath: 'ts:filename/context.d.ts'
+      }]);
     }
-  }, [monaco, activeContext]);
+  }, [monaco, activeContext, stages]);
 
   const handleExportPipeline = () => {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(stages, null, 2));
@@ -160,9 +196,32 @@ export default function MiddlePanel() {
           >
             <Download className="w-4 h-4" />
           </button>
+          <div className="h-4 w-px bg-slate-700 mx-1"></div>
+          <button 
+            onClick={handleExpandAll}
+            className="flex items-center gap-1 px-2 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+            title="Expand All"
+          >
+            <ChevronsUpDown className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleCompact}
+            className="flex items-center gap-1 px-2 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+            title="Compact (Show Code)"
+          >
+            <AlignJustify className="w-4 h-4" />
+          </button>
+          <button 
+            onClick={handleCollapseAll}
+            className="flex items-center gap-1 px-2 py-1.5 text-sm bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md transition-colors"
+            title="Collapse All"
+          >
+            <ChevronsDownUp className="w-4 h-4" />
+          </button>
+          <div className="h-4 w-px bg-slate-700 mx-1"></div>
           <button 
             onClick={addStage}
-            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition-colors ml-2"
+            className="flex items-center gap-1 px-3 py-1.5 text-sm bg-indigo-600 hover:bg-indigo-500 text-white rounded-md transition-colors ml-1"
           >
             <Plus className="w-4 h-4" />
             Add Stage
@@ -193,7 +252,7 @@ export default function MiddlePanel() {
           </div>
         ) : (
           stages.map((stage, index) => (
-            <div key={stage.id} className="relative">
+            <div key={`${stage.id}-${index}`} className="relative">
             {index !== stages.length - 1 && (
               <div className="absolute left-6 top-16 bottom-[-24px] w-0.5 bg-slate-800 z-0"></div>
             )}
@@ -219,9 +278,25 @@ export default function MiddlePanel() {
                       type="text"
                       value={stage.name}
                       onChange={(e) => updateStageName(stage.id, e.target.value)}
-                      className="font-medium text-slate-200 bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none w-full transition-colors"
+                      disabled={stage.approvalState === 'approved'}
+                      className="font-medium text-slate-200 bg-transparent border-b border-transparent hover:border-slate-700 focus:border-indigo-500 focus:outline-none w-full transition-colors disabled:opacity-70 disabled:hover:border-transparent disabled:cursor-not-allowed"
+                      placeholder="Stage Name..."
                     />
-                    <p className="text-xs text-slate-500 capitalize">Status: {stage.status}</p>
+                    <p className="text-xs text-slate-500 capitalize flex items-center gap-2">
+                      Status: {stage.status}
+                      <span className="text-slate-700">|</span>
+                      <select 
+                        value={stage.shape || 'rectangle'} 
+                        onChange={(e) => updateStageShape(stage.id, e.target.value as any)}
+                        disabled={stage.approvalState === 'approved'}
+                        className="bg-transparent border-none text-slate-400 focus:ring-0 p-0 text-xs cursor-pointer hover:text-indigo-400 outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+                      >
+                        <option value="rectangle">Rectangle (Process)</option>
+                        <option value="diamond">Diamond (Decision)</option>
+                        <option value="ellipse">Ellipse (Start/End)</option>
+                        <option value="parallelogram">Parallelogram (I/O)</option>
+                      </select>
+                    </p>
                   </div>
                 </div>
                 <div className="flex items-center gap-1 ml-4">
@@ -231,7 +306,7 @@ export default function MiddlePanel() {
                     className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 transition-colors p-1"
                     title="Move Up"
                   >
-                    <ChevronDown className="w-5 h-5 rotate-180" />
+                    <ArrowUp className="w-5 h-5" />
                   </button>
                   <button 
                     onClick={() => moveStage(stage.id, 'down')}
@@ -239,11 +314,41 @@ export default function MiddlePanel() {
                     className="text-slate-500 hover:text-indigo-400 disabled:opacity-30 transition-colors p-1"
                     title="Move Down"
                   >
-                    <ChevronDown className="w-5 h-5" />
+                    <ArrowDown className="w-5 h-5" />
                   </button>
                   <button 
+                    onClick={() => setShowReq(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}
+                    className={cn("transition-colors p-1 ml-1", stage.description ? "text-indigo-400 hover:text-indigo-300" : "text-slate-500 hover:text-indigo-400")}
+                    title={stage.description ? "Edit Requirement" : "Add Requirement"}
+                  >
+                    <MessageSquareText className="w-4 h-4" />
+                  </button>
+                  <button 
+                    onClick={() => setCollapsedStages(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}
+                    className="text-slate-500 hover:text-indigo-400 transition-colors p-1 ml-1"
+                    title={collapsedStages[stage.id] ? "Expand Stage" : "Collapse Stage"}
+                  >
+                    <ChevronDown className={cn("w-5 h-5 transition-transform", collapsedStages[stage.id] && "-rotate-90")} />
+                  </button>
+                  <select 
+                    value={stage.approvalState || 'draft'}
+                    onChange={(e) => setStageApprovalState(stage.id, e.target.value as any)}
+                    className={cn(
+                      "text-[10px] font-bold uppercase px-2 py-1 rounded border appearance-none cursor-pointer outline-none ml-2",
+                      stage.approvalState === 'approved' ? 'bg-emerald-950 text-emerald-400 border-emerald-800' :
+                      stage.approvalState === 'review' ? 'bg-amber-950 text-amber-400 border-amber-800' :
+                      'bg-slate-800 text-slate-400 border-slate-700'
+                    )}
+                    title="Stage Approval Workflow"
+                  >
+                    <option value="draft">Draft</option>
+                    <option value="review">Review</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                  <button 
                     onClick={() => removeStage(stage.id)}
-                    className="text-slate-500 hover:text-rose-400 transition-colors p-1 ml-2"
+                    disabled={stage.approvalState === 'approved'}
+                    className="text-slate-500 hover:text-rose-400 disabled:opacity-30 disabled:hover:text-slate-500 transition-colors p-1 ml-1"
                     title="Remove Stage"
                   >
                     <XCircle className="w-5 h-5" />
@@ -251,7 +356,23 @@ export default function MiddlePanel() {
                 </div>
               </div>
 
+              {!collapsedStages[stage.id] && (
               <div className="space-y-4">
+                {(showReq[stage.id] || stage.description) && (
+                  <div className="bg-slate-950/50 border border-slate-800/80 rounded-lg p-3 animate-in fade-in slide-in-from-top-2 duration-300">
+                    <label className="block text-[10px] font-semibold text-indigo-400/80 mb-2 uppercase tracking-wider flex justify-between items-center">
+                      Business Requirement
+                      <button onClick={() => setShowReq(prev => ({ ...prev, [stage.id]: false }))} className="text-slate-500 hover:text-slate-300"><XCircle className="w-3 h-3" /></button>
+                    </label>
+                    <textarea 
+                      value={stage.description || ''}
+                      onChange={(e) => updateStageDescription(stage.id, e.target.value)}
+                      disabled={stage.approvalState === 'approved'}
+                      placeholder="Describe the business rules, eligibility criteria, or required operations for this stage..."
+                      className="w-full bg-slate-900 border border-slate-800 focus:border-indigo-500 rounded p-2 text-xs text-slate-300 resize-none h-12 focus:outline-none transition-colors disabled:opacity-80 disabled:cursor-not-allowed"
+                    />
+                  </div>
+                )}
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block text-xs text-slate-400">Expression Logic Rule</label>
@@ -269,6 +390,7 @@ export default function MiddlePanel() {
                   )}>
                     <Editor
                       height="100%"
+                      path={`stage-${stage.id}.js`}
                       defaultLanguage="javascript"
                       theme={theme === 'dark' ? 'vs-dark' : 'light'}
                       value={stage.expression}
@@ -283,7 +405,8 @@ export default function MiddlePanel() {
                         fontFamily: 'monospace',
                         bracketPairColorization: { enabled: true },
                         formatOnPaste: true,
-                        suggestOnTriggerCharacters: true
+                        suggestOnTriggerCharacters: true,
+                        readOnly: stage.approvalState === 'approved'
                       }}
                     />
                   </div>
@@ -291,12 +414,22 @@ export default function MiddlePanel() {
 
                 {stage.outputContext && (
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
-                    <label className="block text-xs text-slate-400 mb-1">Output Context (Diff)</label>
-                    <div className="bg-slate-950 rounded-lg p-3 border border-slate-800/80 overflow-x-auto">
-                      <pre className="text-xs font-mono text-emerald-400">
-                        {JSON.stringify(stage.outputContext, null, 2)}
-                      </pre>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs text-slate-400">Output Context (Diff)</label>
+                      <button 
+                        onClick={() => setCollapsedOutputs(prev => ({ ...prev, [stage.id]: !prev[stage.id] }))}
+                        className="text-slate-500 hover:text-indigo-400 transition-colors p-1 text-xs flex items-center gap-1"
+                      >
+                        {collapsedOutputs[stage.id] ? 'Expand Details' : 'Collapse Details'}
+                      </button>
                     </div>
+                    {!collapsedOutputs[stage.id] && (
+                      <div className="bg-slate-950 rounded-lg p-3 border border-slate-800/80 overflow-x-auto">
+                        <pre className="text-xs font-mono text-emerald-400">
+                          {JSON.stringify(stage.outputContext, null, 2)}
+                        </pre>
+                      </div>
+                    )}
                   </div>
                 )}
                 {stage.errorMessage && (
@@ -305,6 +438,7 @@ export default function MiddlePanel() {
                   </div>
                 )}
               </div>
+              )}
             </div>
           </div>
         )))}

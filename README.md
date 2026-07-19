@@ -1,49 +1,97 @@
-# ClearPath: Dynamic Orchestration Simulator
+<div align="center">
+  <img src="client/public/logo.svg" alt="ClearPath Logo" width="300" />
+  <h1>ClearPath: Enterprise Orchestration & Simulation Engine</h1>
+  <p><em>The ultimate bridge between Business Analysts, Product Managers, and IT Engineering.</em></p>
+  
+  <p>
+    <a href="https://geekpratyush.github.io/ClearPath/"><strong>Live Application Demo</strong></a> | 
+    <a href="https://github.com/geekpratyush/ClearPath"><strong>GitHub Repository</strong></a>
+  </p>
+</div>
 
-ClearPath is an enterprise-grade, browser-based orchestration simulator designed specifically for **Product Managers** and **Business Analysts (BAs)**. It serves as a visual bridge between business requirements and technical implementation, allowing teams to architect, simulate, and document complex transactional state pipelines without writing backend code.
+---
 
-## 🌟 The Vision for Product Teams
-Traditionally, explaining a complex banking logic flow (like a global limits check or a parallel sanctions screening) requires static flowcharts and lengthy Confluence pages. 
+ClearPath is a stunning, state-of-the-art, browser-based orchestration simulator. It empowers **Product Managers**, **Business Analysts (BAs)**, and **Engineers** to architect, simulate, document, and export complex transactional state pipelines—all through a premium glassmorphic UI without requiring any backend deployments.
 
-**ClearPath changes this paradigm.**
+## The Vision
 
-Instead of drawing a flowchart, a BA can construct a living, breathing state machine. You define the payload, write the business logic, and literally **Run the Simulation** to prove the requirements work before handing them off to the engineering team.
+Traditionally, explaining complex business rules (e.g., global limits checks, parallel sanctions screening, fraud detection) requires static flowcharts and lengthy Wiki pages that quickly become outdated.
 
-### Core Capabilities for Analysts:
-1. **Rapid Requirement Prototyping:** Build interactive forms instantly. Paste a sample JSON payload, and ClearPath dynamically generates the UI inputs, sliders, and dropdowns needed to test it.
-2. **Visual Logic Architecture:** Architect non-linear pipelines. Need a stage to loop back if the clearing window is closed? Need parallel processing for Fraud and Sanctions? ClearPath handles advanced routing natively.
-3. **Living Documentation (Import/Export):** Stop losing work in email threads. A BA can architect a pipeline, hit **Export**, and attach the `.json` file to a Jira ticket. The engineer simply hits **Import** to load the exact state machine into their local studio.
-4. **IntelliSense for Business Rules:** You don't need to be an engineer to write logic. The built-in Monaco Editor provides VS Code-style autocomplete, reading your exact payload schema to help you write expressions perfectly.
+**ClearPath changes the paradigm entirely.**
 
-## 🚀 Key Features
+Instead of drawing static diagrams, you construct a **living, breathing state machine**. You define the payload structure, write the exact business logic using native ES6, and literally **Run the Simulation** to prove the requirements work *before* handing them off to the engineering team.
 
-* **Turing-Complete Expression Engine:** Safely evaluate complex rules using a sandboxed native JavaScript executor. Mutate the state mid-flight (e.g., `context.retries++`) and evaluate conditions.
-* **Rich UI Form Definitions:** Define advanced UI components directly in your payload (e.g., `_type: "slider"`, `_type: "select"`) to create beautiful, interactive demos.
-* **React Flow Visualization:** Watch your pipeline execute in real-time. Nodes light up Green (Passed), Red (Breached), or Yellow (Amber/Manual Review) as the simulation processes data.
-* **Persistent Context Management:** Save your custom architectures directly to your browser's local storage. Build a library of specific test cases (e.g., "High-Risk EU Wire") and switch between them instantly.
-* **Day/Night Enterprise Theming:** A beautiful glassmorphic UI that fully supports light and dark modes.
+---
 
-## 🛠️ How to Use It
+## Epic Feature Set
+
+### 1. AI-Ready Architecture
+* **Export as AI Prompt:** ClearPath features a dedicated **AI Export** engine. With one click, your entire workspace (Context JSON, Pipeline Stages, and Business Notes) is serialized into a highly-optimized prompt. You can paste this directly into Claude or ChatGPT to automatically generate unit tests, identify edge cases, or produce stunning Mermaid.js architecture diagrams!
+* **Living Documentation:** Say goodbye to stale docs. The platform features an extensive built-in **Documentation Modal** that auto-embeds actual WebP recordings of your application running, detailed ES6 writing guides, and component breakdowns.
+
+### 2. Dynamic Context Engine
+* **Rapid Requirement Prototyping:** Paste any raw JSON payload into the `Context Editor`. ClearPath instantly parses it and dynamically generates a rich UI form for you to manipulate!
+* **Rich UI Definitions:** Force the generation of advanced HTML elements by adding a `_type` field to your JSON. Supported types include `slider`, `select`, `toggle`, etc. (e.g., `_type: "slider", min: 0, max: 100`).
+* **Environment Management:** Upload `.json` files to instantly load an environment, or download your current state to attach it to Jira tickets.
+
+### 3. ES6 Business Rules Engine
+* **Turing-Complete Expressions:** Write your validation logic using modern **ES6 (ECMAScript 2015+)**.
+* **Mutate State Mid-Flight:** Because stages share the global `context` object, you can dynamically inject calculated fields (e.g., `context.transactionFee = context.amount * 0.05`) to pass data downstream!
+* **Intelligent Auto-Complete:** Powered by Monaco Editor, you get world-class syntax highlighting and VS Code-level IntelliSense as you type.
+* **Support for Advanced JS:** Use array methods (`map`, `filter`, `reduce`), optional chaining (`?.`), nullish coalescing (`??`), and object destructuring directly inside your pipeline stages.
+
+### 4. Visual Flow & Routing
+* **React Flow Visualization:** The Middle Panel features an auto-laying React Flow graph.
+* **Dynamic Node Reordering:** Use up/down arrows to shift stages around, and watch the visual graph animate and reorganize itself instantly.
+* **Intelligent Routing Paths:** Nodes can return statuses like `PASSED`, `AMBER`, or `FAILED`. When exported, you can define explicit JSON routing tables to dictate parallel execution or loop-backs for manual review branches.
+
+### 5. Premium Aesthetics
+* **Glassmorphism Design:** Built on Tailwind CSS v4, the application features a deeply immersive, semi-transparent frosted glass design that looks breathtaking.
+* **Dynamic Animations:** Micro-interactions, hover states, fade-ins, and auto-animating nodes keep the interface feeling responsive and alive.
+* **Dark / Light Modes:** Seamless toggle between a vibrant, sleek Dark mode and a clean, legible Light mode.
+
+---
+
+## How to Master ClearPath
 
 ### 1. Define the Context (Left Panel)
 The Context represents the "data payload" moving through your system.
-* Use the **JSON Tab** to paste a raw payload, or select a predefined Template from the dropdown.
-* Switch to the **Visual Tab** to manipulate the variables using toggles and inputs.
-* Click **Save Context** to persist your current setup to Local Storage for future sessions!
+1. Switch to the **JSON Tab** and paste a raw payload.
+2. Switch back to the **Visual Tab** to manipulate the variables using the auto-generated toggles, sliders, and inputs.
+3. Click the **Upload / Download** icons in the header to persist your work.
 
 ### 2. Build the Pipeline (Middle Panel)
-* Click **+ Add Stage** to create a validation step.
-* Write a business rule in the Monaco Editor. Use standard JavaScript (e.g., `context.amount > 1000 ? "AMBER" : "PASSED"`).
-* Need branching? Export the pipeline, edit the `"routing"` block to define parallel paths, and import it back.
+1. Click **+ Add Stage** to create a validation step.
+2. Name your stage (e.g., "AML Compliance Check").
+3. Write a business rule in the Monaco Editor using ES6 (e.g., `context.riskScore.value > 80 ? "FAILED" : "PASSED"`).
+4. Watch the visual graph build your architecture in real time.
 
-### 3. Run the Simulation (Right Panel)
-* Click **Run Simulation**.
-* Watch the pipeline process the data stage-by-stage.
-* View the **Output Context** diffs under each stage to see exactly how your payload mutated during the journey.
+### 3. Run the Simulation & Document (Right Panel)
+1. Write down specific business rules or ACs in the **Workspace Notes**.
+2. Click the **Run** button to watch the pipeline process the data stage-by-stage.
+3. Observe exactly which nodes turned Green (Passed) or Red (Breached).
+4. Click **Export as AI Prompt** to share the workflow with your AI assistant.
 
-## 📦 Tech Stack
-* **Vite + React:** Blazing fast frontend framework.
-* **Zustand:** Lightweight global state management (with LocalStorage persistence).
-* **Tailwind CSS v4:** Utility-first styling with comprehensive CSS variable theming.
+---
+
+## Tech Stack
+* **Vite + React:** Blazing fast frontend build tool and rendering library.
+* **Zustand:** Lightweight global state management for cross-panel synchronization.
+* **Tailwind CSS v4:** Utility-first styling enabling the premium glassmorphism aesthetic.
 * **Monaco Editor:** Real-time TypeScript/JavaScript IntelliSense.
 * **React Flow:** Node-based diagramming and dynamic layout generation.
+* **Lucide React:** Beautiful, consistent iconography.
+
+---
+
+## Quick Start (Development)
+
+To run ClearPath locally and start architecting pipelines:
+
+```bash
+cd client
+npm install
+npm run dev
+```
+
+The application will launch automatically. Press the **Docs** button in the top right header to explore the interactive, built-in system documentation!

@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 60 60" width="60" height="60">
+  <defs>
+    <linearGradient id="icon-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8"/>
+      <stop offset="100%" stop-color="#3b82f6"/>
+    </linearGradient>
+  </defs>
+  <path d="M 15,30 L 35,10 L 45,20 L 25,40 Z" fill="url(#icon-gradient)" />
+  <path d="M 30,45 L 50,25 L 60,35 L 40,55 Z" fill="url(#icon-gradient)" />
+</svg>

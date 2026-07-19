@@ -1,10 +1,10 @@
 import { useState, useRef } from 'react';
 import { useStore } from '../store/useStore';
-import { Database, SlidersHorizontal, Code, Upload, Download } from 'lucide-react';
+import { Database, SlidersHorizontal, Code, Upload, Download, FileText, Wrench, Plus, Trash2 } from 'lucide-react';
 
 export default function LeftPanel() {
-  const [activeTab, setActiveTab] = useState<'json' | 'form'>('form');
-  const { initialContext, updateContextField, setInitialContext, importContext, customTemplates, saveTemplate, deleteTemplate, resetTemplates, activeTemplateName } = useStore();
+  const [activeTab, setActiveTab] = useState<'json' | 'form' | 'notes' | 'builder'>('form');
+  const { initialContext, updateContextField, setInitialContext, importContext, customTemplates, saveTemplate, deleteTemplate, resetTemplates, activeTemplateName, workspaceNotes, updateWorkspaceNotes } = useStore();
   const [jsonText, setJsonText] = useState(JSON.stringify(initialContext, null, 2));
   const [isSavingAs, setIsSavingAs] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
@@ -173,6 +173,126 @@ export default function LeftPanel() {
     });
   };
 
+  const renderSchemaBuilderNode = (obj: any, path: string[]) => {
+    return (
+      <div className="space-y-2">
+        {Object.entries(obj).map(([key, value]) => {
+          const isGroup = typeof value === 'object' && value !== null && value._type === undefined;
+          return (
+            <div 
+              key={key} 
+              className="border border-slate-800 rounded p-2 bg-slate-950 group/node transition-colors hover:border-slate-600"
+              draggable
+              onDragStart={(e) => {
+                e.dataTransfer.setData('text/plain', JSON.stringify({ key, path }));
+                e.stopPropagation();
+              }}
+              onDragEnter={(e) => e.preventDefault()}
+              onDragOver={(e) => {
+                e.preventDefault(); 
+              }}
+              onDrop={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                try {
+                  const data = JSON.parse(e.dataTransfer.getData('text/plain'));
+                  if (data.key === key) return;
+                  if (JSON.stringify(data.path) !== JSON.stringify(path)) return; 
+                  
+                  const newContext = JSON.parse(JSON.stringify(initialContext));
+                  let curr = newContext;
+                  for (const p of path) curr = curr[p];
+                  
+                  const keys = Object.keys(curr);
+                  const sourceIdx = keys.indexOf(data.key);
+                  
+                  if (sourceIdx >= 0) {
+                    keys.splice(sourceIdx, 1);
+                    const targetIdx = keys.indexOf(key);
+                    
+                    if (targetIdx >= 0) {
+                      keys.splice(targetIdx, 0, data.key);
+                      
+                      const newObj: any = {};
+                      for (const k of keys) {
+                        newObj[k] = curr[k];
+                      }
+                      
+                      if (path.length === 0) {
+                        setInitialContext(newObj);
+                      } else {
+                        let parent = newContext;
+                        for (let i = 0; i < path.length - 1; i++) {
+                           parent = parent[path[i]];
+                        }
+                        parent[path[path.length - 1]] = newObj;
+                        setInitialContext(newContext);
+                      }
+                    }
+                  }
+                } catch(err) {
+                  console.error("Drop error", err);
+                }
+              }}
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="cursor-grab active:cursor-grabbing text-slate-600 hover:text-indigo-400">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="12" r="1"/><circle cx="9" cy="5" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="19" r="1"/></svg>
+                  </div>
+                  <span className="text-sm text-slate-300 font-medium">{key}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-[10px] bg-slate-800 text-slate-400 px-1.5 py-0.5 rounded uppercase">{isGroup ? 'group' : value?._type || typeof value}</span>
+                  <button 
+                    onClick={() => {
+                      const newContext = JSON.parse(JSON.stringify(initialContext));
+                      if (path.length === 0) {
+                        delete newContext[key];
+                      } else {
+                        let curr = newContext;
+                        for (const p of path) curr = curr[p];
+                        delete curr[key];
+                      }
+                      setInitialContext(newContext);
+                    }} 
+                    className="text-rose-500 hover:text-rose-400 opacity-0 group-hover/node:opacity-100 transition-opacity"
+                    title="Delete field"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              </div>
+              {isGroup && (
+                <div className="mt-2 pl-6 border-l border-slate-700/50">
+                  {renderSchemaBuilderNode(value, [...path, key])}
+                  <BuilderAddField 
+                    onAdd={(k, t) => {
+                      const newContext = JSON.parse(JSON.stringify(initialContext));
+                      let curr = newContext;
+                      for (const p of [...path, key]) curr = curr[p];
+                      
+                      let defaultVal: any = "";
+                      if (t === 'number') defaultVal = 0;
+                      else if (t === 'boolean') defaultVal = false;
+                      else if (t === 'group') defaultVal = {};
+                      else if (t === 'slider') defaultVal = { _type: "slider", value: 50, min: 0, max: 100, step: 1 };
+                      else if (t === 'select') defaultVal = { _type: "select", value: "Option 1", options: ["Option 1", "Option 2"] };
+                      else if (t === 'radio') defaultVal = { _type: "radio", value: "Option 1", options: ["Option 1", "Option 2"] };
+                      
+                      curr[k] = defaultVal;
+                      setInitialContext(newContext);
+                    }} 
+                  />
+                </div>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    );
+  };
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border-r border-slate-800">
       {/* Workspace Templates Panel */}
@@ -189,11 +309,11 @@ export default function LeftPanel() {
             className="bg-slate-800 text-sm text-slate-300 border border-slate-700 rounded px-2 py-1.5 outline-none focus:border-indigo-500 w-full"
           >
             <optgroup label="System Templates">
-              <option value="standard">Standard Limit Check</option>
-              <option value="parallel">Parallel Sanctions</option>
-              <option value="loopback">Wait / Loopback</option>
-              <option value="transform">Data Transform</option>
-              <option value="richui">Rich UI Components</option>
+              <option value="clearingLimits">Clearing Limits (Financial)</option>
+              <option value="earmarkingApproval">Earmarking Approval</option>
+              <option value="facilityEligibility">Facility Eligibility</option>
+              <option value="onboarding">User Onboarding Flow</option>
+              <option value="interactiveRisk">Interactive UI Example</option>
               <option value="scratchpad">Blank Scratchpad</option>
             </optgroup>
             {Object.keys(customTemplates).length > 0 && (
@@ -241,6 +361,37 @@ export default function LeftPanel() {
               </div>
             ) : (
               <>
+                <button 
+                  onClick={() => {
+                    const richContext = {
+                      configuration: {
+                        threshold: { _type: "slider", value: 50, min: 0, max: 100, step: 1 },
+                        mode: { _type: "select", value: "Standard", options: ["Standard", "Advanced", "Strict"] },
+                        environment: { _type: "radio", value: "Production", options: ["Production", "UAT", "Dev"] },
+                        enableLogging: true
+                      },
+                      data: {
+                        referenceId: "NEW-1234"
+                      }
+                    };
+                    useStore.getState().setInitialContext(richContext);
+                    useStore.getState().importPipeline([{
+                      id: `stage-${Date.now()}`,
+                      name: 'Initial Stage',
+                      expression: 'context.configuration.threshold.value > 0 ? "PASSED" : "FAILED"',
+                      status: 'idle',
+                      shape: 'ellipse'
+                    }]);
+                    useStore.getState().updateWorkspaceNotes('New workspace initialized with rich UI components. Edit this note to document your requirements.');
+                    
+                    setSaveAsName('New Workspace');
+                    setIsSavingAs(true);
+                  }}
+                  className="text-[10px] font-medium bg-emerald-900/50 hover:bg-emerald-600 px-2 py-1 rounded text-emerald-400 hover:text-white transition-colors border border-emerald-800/50"
+                  title="Create a new workspace with rich components"
+                >
+                  New
+                </button>
                 <button 
                   onClick={() => {
                     if (customTemplates[activeTemplateName]) {
@@ -319,10 +470,24 @@ export default function LeftPanel() {
           </button>
           <button 
             onClick={() => setActiveTab('json')}
-            className={`px-3 py-1 text-sm rounded-md transition-colors ${activeTab === 'json' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}
+            className={`px-3 py-1 text-sm rounded-md transition-colors flex-1 ${activeTab === 'json' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}
           >
             <Code className="w-4 h-4 inline-block mr-1" />
             JSON
+          </button>
+          <button 
+            onClick={() => setActiveTab('notes')}
+            className={`px-2 py-1 text-xs rounded-md transition-colors flex-1 flex items-center justify-center ${activeTab === 'notes' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <FileText className="w-3.5 h-3.5 mr-1" />
+            Notes
+          </button>
+          <button 
+            onClick={() => setActiveTab('builder')}
+            className={`px-2 py-1 text-xs rounded-md transition-colors flex-1 flex items-center justify-center ${activeTab === 'builder' ? 'bg-indigo-500 text-white' : 'text-slate-400 hover:text-white'}`}
+          >
+            <Wrench className="w-3.5 h-3.5 mr-1" />
+            Builder
           </button>
         </div>
       </div>
@@ -335,12 +500,60 @@ export default function LeftPanel() {
             className="w-full h-full bg-slate-950 text-emerald-400 p-4 rounded-lg font-mono text-sm border border-slate-800 focus:outline-none focus:border-indigo-500 resize-none"
             spellCheck={false}
           />
+        ) : activeTab === 'notes' ? (
+          <textarea
+            value={workspaceNotes}
+            onChange={(e) => updateWorkspaceNotes(e.target.value)}
+            placeholder="Add pipeline requirements, documentation, or sticky notes here..."
+            className="w-full h-full bg-slate-950/80 text-amber-100 p-4 rounded-lg font-sans text-sm border border-amber-900/30 focus:outline-none focus:border-amber-500/50 resize-none shadow-inner"
+          />
+        ) : activeTab === 'builder' ? (
+          <div className="space-y-4">
+            {renderSchemaBuilderNode(initialContext, [])}
+            <BuilderAddField 
+              onAdd={(k, t) => {
+                const newContext = JSON.parse(JSON.stringify(initialContext));
+                let defaultVal: any = "";
+                if (t === 'number') defaultVal = 0;
+                else if (t === 'boolean') defaultVal = false;
+                else if (t === 'group') defaultVal = {};
+                else if (t === 'slider') defaultVal = { _type: "slider", value: 50, min: 0, max: 100, step: 1 };
+                else if (t === 'select') defaultVal = { _type: "select", value: "Option 1", options: ["Option 1", "Option 2"] };
+                else if (t === 'radio') defaultVal = { _type: "radio", value: "Option 1", options: ["Option 1", "Option 2"] };
+                
+                newContext[k] = defaultVal;
+                setInitialContext(newContext);
+              }} 
+            />
+          </div>
         ) : (
           <div className="space-y-4">
             {renderFormFields(initialContext)}
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+function BuilderAddField({ onAdd }: { onAdd: (key: string, type: string) => void }) {
+  const [key, setKey] = useState('');
+  const [type, setType] = useState('string');
+  return (
+    <div className="flex gap-2 items-center mt-2 p-2 border border-dashed border-slate-700 rounded bg-slate-900/50">
+      <input type="text" value={key} onChange={e => setKey(e.target.value)} placeholder="Field name" className="flex-1 bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-500 w-20" />
+      <select value={type} onChange={e => setType(e.target.value)} className="bg-slate-950 border border-slate-800 rounded px-2 py-1 text-xs text-slate-200 outline-none focus:border-indigo-500 w-24">
+        <option value="string">String</option>
+        <option value="number">Number</option>
+        <option value="boolean">Boolean</option>
+        <option value="group">Group</option>
+        <option value="slider">Slider</option>
+        <option value="select">Dropdown</option>
+        <option value="radio">Radio</option>
+      </select>
+      <button onClick={() => { if (key) { onAdd(key, type); setKey(''); } }} className="bg-indigo-600 hover:bg-indigo-500 text-white p-1 rounded shrink-0">
+        <Plus className="w-4 h-4" />
+      </button>
     </div>
   );
 }

@@ -1,98 +1,156 @@
-import React from 'react';
+import React, { useCallback, useRef, useEffect } from 'react';
 import { useStore, type PipelineStatus } from '../store/useStore';
 import { Play, Download, Image as ImageIcon, FileJson, PlayCircle } from 'lucide-react';
-import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType } from '@xyflow/react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position, useReactFlow, ReactFlowProvider, getNodesBounds, getViewportForBounds } from '@xyflow/react';
+import { toPng, toSvg } from 'html-to-image';
+import dagre from 'dagre';
 import '@xyflow/react/dist/style.css';
 
+const dagreGraph = new dagre.graphlib.Graph();
+dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-export default function RightPanel() {
+const getLayoutedElements = (nodes: any[], edges: any[], direction = 'TB') => {
+  dagreGraph.setGraph({ rankdir: direction, ranksep: 80, nodesep: 60 });
+
+  nodes.forEach((node) => {
+    dagreGraph.setNode(node.id, { width: 140, height: 60 });
+  });
+
+  edges.forEach((edge) => {
+    dagreGraph.setEdge(edge.source, edge.target);
+  });
+
+  dagre.layout(dagreGraph);
+
+  const newNodes = nodes.map((node) => {
+    const nodeWithPosition = dagreGraph.node(node.id);
+    return {
+      ...node,
+      targetPosition: 'top' as Position,
+      sourcePosition: 'bottom' as Position,
+      position: {
+        x: nodeWithPosition.x - 70,
+        y: nodeWithPosition.y - 30,
+      },
+    };
+  });
+
+  return { nodes: newNodes, edges };
+};
+
+// Custom Shape Node Component
+const ShapeNode = ({ data }: any) => {
+  const shape = data.shape || 'rectangle';
+  const label = data.label;
+  const status = data.status;
+
+  const baseStyle = {
+    background: status === 'passed' ? 'var(--color-emerald-900, #064e3b)' :
+               status === 'breached' ? 'var(--color-rose-900, #7f1d1d)' :
+               status === 'amber' ? 'var(--color-amber-900, #78350f)' :
+               status === 'processing' ? 'var(--color-blue-900, #1e3a8a)' :
+               'var(--color-slate-900, #1e293b)',
+    color: 'var(--color-slate-200, #f8fafc)',
+    border: `1px solid ${status === 'passed' ? 'var(--color-emerald-500, #10b981)' : status === 'breached' ? 'var(--color-rose-500, #f43f5e)' : status === 'amber' ? 'var(--color-amber-500, #f59e0b)' : 'var(--color-blue-500, #3b82f6)'}`,
+    transition: 'background-color 0.3s, color 0.3s',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    textAlign: 'center' as const,
+    fontSize: '11px',
+    fontWeight: '500',
+    padding: '6px'
+  };
+
+  let specificStyle: any = { width: 130, height: 45, borderRadius: 6 };
+
+  if (shape === 'ellipse') {
+    specificStyle = { width: 130, height: 50, borderRadius: '50%' };
+  } else if (shape === 'diamond') {
+    specificStyle = { width: 85, height: 85, transform: 'rotate(45deg)', padding: 0 };
+  } else if (shape === 'parallelogram') {
+    specificStyle = { width: 130, height: 45, transform: 'skew(-15deg)', borderRadius: 0 };
+  }
+
+  return (
+    <div className="relative group">
+      <Handle type="target" position={Position.Top} className="opacity-0 group-hover:opacity-100" />
+      <div style={{ ...baseStyle, ...specificStyle }} className="shadow-md">
+        <div style={{ transform: shape === 'diamond' ? 'rotate(-45deg)' : shape === 'parallelogram' ? 'skew(15deg)' : 'none', width: '100%' }}>
+          {label}
+        </div>
+      </div>
+      <Handle type="source" position={Position.Bottom} className="opacity-0 group-hover:opacity-100" />
+    </div>
+  );
+};
+
+const nodeTypes = {
+  customShape: ShapeNode,
+};
+
+function FlowPanel() {
   const { initialContext, stages, isSimulating, updateStageStatus, resetSimulation, theme } = useStore();
+  const reactFlowWrapper = useRef<HTMLDivElement>(null);
+  const { fitView, getNodes } = useReactFlow();
 
-  // Generate nodes from stages for React Flow
-  const initialNodes = stages.map((stage, index) => ({
-    id: stage.id,
-    position: { x: 50, y: 50 + index * 100 },
-    data: { label: stage.name },
-    style: {
-      background: stage.status === 'passed' ? '#064e3b' :
-                 stage.status === 'breached' ? '#7f1d1d' :
-                 stage.status === 'amber' ? '#78350f' :
-                 stage.status === 'processing' ? '#1e3a8a' :
-                 '#1e293b',
-      color: '#f8fafc',
-      border: `1px solid ${stage.status === 'passed' ? '#10b981' : stage.status === 'breached' ? '#f43f5e' : stage.status === 'amber' ? '#f59e0b' : '#3b82f6'}`,
-      borderRadius: '8px',
-      width: 200,
-    }
-  }));
-
-  const initialEdges = stages.slice(0, -1).map((stage, index) => ({
-    id: `e-${stage.id}-${stages[index + 1].id}`,
-    source: stage.id,
-    target: stages[index + 1].id,
-    animated: isSimulating,
-    style: { stroke: '#475569' },
-    markerEnd: {
-      type: MarkerType.ArrowClosed,
-      color: '#475569',
-    },
-  }));
-
-  const [nodes, setNodes, onNodesChange] = useNodesState(initialNodes);
-  const [edges, setEdges, onEdgesChange] = useEdgesState(initialEdges);
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
 
   // Sync React Flow when stages change
-  React.useEffect(() => {
-    setNodes(stages.map((stage, index) => ({
+  useEffect(() => {
+    let rawNodes = stages.map((stage) => ({
       id: stage.id,
-      position: { x: 50, y: 50 + index * 100 },
-      data: { label: stage.name },
-      style: {
-        background: stage.status === 'passed' ? 'var(--color-emerald-900, #064e3b)' :
-                   stage.status === 'breached' ? 'var(--color-rose-900, #7f1d1d)' :
-                   stage.status === 'amber' ? 'var(--color-amber-900, #78350f)' :
-                   stage.status === 'processing' ? 'var(--color-blue-900, #1e3a8a)' :
-                   'var(--color-slate-900, #1e293b)',
-        color: 'var(--color-slate-200, #f8fafc)',
-        border: `1px solid ${stage.status === 'passed' ? 'var(--color-emerald-500, #10b981)' : stage.status === 'breached' ? 'var(--color-rose-500, #f43f5e)' : stage.status === 'amber' ? 'var(--color-amber-500, #f59e0b)' : 'var(--color-blue-500, #3b82f6)'}`,
-        borderRadius: '8px',
-        width: 200,
-        transition: 'background-color 0.3s, color 0.3s'
-      }
-    })));
+      type: 'customShape',
+      position: { x: 0, y: 0 },
+      data: { label: stage.name, status: stage.status, shape: stage.shape }
+    }));
 
-    const newEdges: any[] = [];
+    let rawEdges: any[] = [];
     stages.forEach((stage, index) => {
+      const edgeBase = {
+        type: 'smoothstep',
+        animated: isSimulating,
+      };
+
       if (stage.routing) {
         if (stage.routing.passed) {
           stage.routing.passed.forEach(targetId => {
-            newEdges.push({ id: `e-${stage.id}-${targetId}-passed`, source: stage.id, target: targetId, animated: isSimulating, style: { stroke: 'var(--color-emerald-500, #10b981)' }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-emerald-500, #10b981)' } });
+            rawEdges.push({ ...edgeBase, id: `e-${stage.id}-${targetId}-passed`, source: stage.id, target: targetId, style: { stroke: 'var(--color-emerald-500, #10b981)', strokeWidth: 1.5 }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-emerald-500, #10b981)' } });
           });
         }
         if (stage.routing.breached) {
           stage.routing.breached.forEach(targetId => {
-            newEdges.push({ id: `e-${stage.id}-${targetId}-breached`, source: stage.id, target: targetId, animated: isSimulating, style: { stroke: 'var(--color-rose-500, #f43f5e)' }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-rose-500, #f43f5e)' } });
+            rawEdges.push({ ...edgeBase, id: `e-${stage.id}-${targetId}-breached`, source: stage.id, target: targetId, style: { stroke: 'var(--color-rose-500, #f43f5e)', strokeWidth: 1.5 }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-rose-500, #f43f5e)' } });
           });
         }
         if (stage.routing.amber) {
           stage.routing.amber.forEach(targetId => {
-            newEdges.push({ id: `e-${stage.id}-${targetId}-amber`, source: stage.id, target: targetId, animated: isSimulating, style: { stroke: 'var(--color-amber-500, #f59e0b)' }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-amber-500, #f59e0b)' } });
+            rawEdges.push({ ...edgeBase, id: `e-${stage.id}-${targetId}-amber`, source: stage.id, target: targetId, style: { stroke: 'var(--color-amber-500, #f59e0b)', strokeWidth: 1.5 }, markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-amber-500, #f59e0b)' } });
           });
         }
       } else if (index < stages.length - 1) {
-        // Fallback to linear if no routing defined
-        newEdges.push({
+        rawEdges.push({
+          ...edgeBase,
           id: `e-${stage.id}-${stages[index + 1].id}`,
           source: stage.id,
           target: stages[index + 1].id,
-          animated: isSimulating,
-          style: { stroke: 'var(--color-slate-500, #475569)' },
-          markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-slate-500, #475569)' },
+          style: { stroke: 'var(--color-slate-500, #64748b)', strokeWidth: 1.5 },
+          markerEnd: { type: MarkerType.ArrowClosed, color: 'var(--color-slate-500, #64748b)' },
         });
       }
     });
-    setEdges(newEdges);
-  }, [stages, isSimulating, setNodes, setEdges]);
+
+    const { nodes: layoutedNodes, edges: layoutedEdges } = getLayoutedElements(rawNodes, rawEdges);
+    
+    setNodes([...layoutedNodes]);
+    setEdges([...layoutedEdges]);
+
+    // Delay fitView slightly to ensure React Flow has rendered the new positions
+    setTimeout(() => {
+      fitView({ padding: 0.2, duration: 400 });
+    }, 50);
+  }, [stages, isSimulating, setNodes, setEdges, fitView]);
 
   const executeSimulation = async () => {
     resetSimulation();
@@ -169,36 +227,120 @@ export default function RightPanel() {
     const downloadAnchorNode = document.createElement('a');
     downloadAnchorNode.setAttribute("href", dataStr);
     downloadAnchorNode.setAttribute("download", "clearpath-simulation.json");
-    document.body.appendChild(downloadAnchorNode); // required for firefox
+    document.body.appendChild(downloadAnchorNode);
     downloadAnchorNode.click();
     downloadAnchorNode.remove();
   };
 
+  const downloadImage = useCallback((format: 'png' | 'svg' = 'png') => {
+    const nodes = getNodes();
+    if (nodes.length === 0) return;
+    
+    const nodesBounds = getNodesBounds(nodes);
+    const imageWidth = Math.max(800, nodesBounds.width + 200);
+    const imageHeight = Math.max(600, nodesBounds.height + 200);
+
+    const transform = getViewportForBounds(
+      nodesBounds,
+      imageWidth,
+      imageHeight,
+      0.5,
+      2
+    );
+
+    const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
+    if (!viewport) return;
+
+    const config = {
+      backgroundColor: theme === 'dark' ? '#0f172a' : '#ffffff', // slate-900 or white
+      width: imageWidth,
+      height: imageHeight,
+      style: {
+        width: `${imageWidth}px`,
+        height: `${imageHeight}px`,
+        transform: `translate(${transform.x}px, ${transform.y}px) scale(${transform.zoom})`,
+      },
+      filter: (node: HTMLElement) => {
+        if (node?.classList?.contains('react-flow__minimap') || node?.classList?.contains('react-flow__controls')) {
+          return false;
+        }
+        return true;
+      }
+    };
+
+    if (format === 'png') {
+      toPng(viewport, config).then((dataUrl) => {
+        const a = document.createElement('a');
+        a.setAttribute('download', 'pipeline-diagram.png');
+        a.setAttribute('href', dataUrl);
+        a.click();
+      });
+    } else {
+      toSvg(viewport, config).then((dataUrl) => {
+        const a = document.createElement('a');
+        a.setAttribute('download', 'pipeline-diagram.svg');
+        a.setAttribute('href', dataUrl);
+        a.click();
+      });
+    }
+  }, [getNodes, theme]);
+
   return (
     <div className="flex flex-col h-full bg-slate-900 border-l border-slate-800">
-      <div className="flex items-center justify-between p-4 border-b border-slate-800">
+      <div className="flex items-center justify-between p-4 border-b border-slate-800 shrink-0 flex-wrap gap-2">
         <h2 className="text-lg font-semibold flex items-center gap-2">
           <PlayCircle className="w-5 h-5 text-indigo-400" />
-          Simulation & Export
+          Simulation
         </h2>
-        <button
-          onClick={executeSimulation}
-          disabled={isSimulating}
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all ${
-            isSimulating 
-              ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
-              : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]'
-          }`}
-        >
-          <Play className="w-4 h-4 fill-current" />
-          {isSimulating ? 'Running...' : 'Run Simulation'}
-        </button>
+        
+        <div className="flex items-center gap-2 ml-auto">
+          <button 
+            onClick={exportJSON}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 transition-all text-slate-300"
+            title="Export JSON payload"
+          >
+            <FileJson className="w-4 h-4 text-blue-400" />
+            JSON
+          </button>
+          
+          <button 
+            onClick={() => downloadImage('svg')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 transition-all text-slate-300"
+            title="Export Diagram as SVG"
+          >
+            <ImageIcon className="w-4 h-4 text-pink-400" />
+            SVG
+          </button>
+
+          <button 
+            onClick={() => downloadImage('png')}
+            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 transition-all text-slate-300"
+            title="Export Diagram as PNG"
+          >
+            <ImageIcon className="w-4 h-4 text-purple-400" />
+            PNG
+          </button>
+
+          <button
+            onClick={executeSimulation}
+            disabled={isSimulating}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-medium transition-all text-sm ${
+              isSimulating 
+                ? 'bg-slate-700 text-slate-400 cursor-not-allowed'
+                : 'bg-indigo-600 hover:bg-indigo-500 text-white shadow-[0_0_15px_rgba(79,70,229,0.3)]'
+            }`}
+          >
+            <Play className="w-4 h-4 fill-current" />
+            {isSimulating ? 'Running...' : 'Run Simulation'}
+          </button>
+        </div>
       </div>
 
-      <div className="flex-1 relative h-1/2 min-h-[300px] border-b border-slate-800 bg-slate-950">
+      <div className="flex-1 relative h-full min-h-[300px] bg-slate-950" ref={reactFlowWrapper}>
         <ReactFlow
           nodes={nodes}
           edges={edges}
+          nodeTypes={nodeTypes}
           onNodesChange={onNodesChange}
           onEdgesChange={onEdgesChange}
           fitView
@@ -209,53 +351,14 @@ export default function RightPanel() {
           <Controls className="bg-slate-800 border-slate-700 fill-slate-300" />
         </ReactFlow>
       </div>
-
-      <div className="p-6 h-1/3 bg-slate-900">
-        <h3 className="text-sm font-medium text-slate-400 mb-4 uppercase tracking-wider">Export Center</h3>
-        <div className="grid grid-cols-1 gap-3">
-          <button 
-            onClick={exportJSON}
-            className="flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-slate-600 transition-all group"
-          >
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-blue-900/30 rounded-lg group-hover:bg-blue-900/50 transition-colors">
-                <FileJson className="w-5 h-5 text-blue-400" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-200">Export Simulation JSON</div>
-                <div className="text-xs text-slate-500">Full configuration & context payload</div>
-              </div>
-            </div>
-            <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-          </button>
-
-          <button className="flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-slate-600 transition-all group">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-emerald-900/30 rounded-lg group-hover:bg-emerald-900/50 transition-colors">
-                <FileJson className="w-5 h-5 text-emerald-400" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-200">Generate AI-Ready Spec</div>
-                <div className="text-xs text-slate-500">Markdown requirement document</div>
-              </div>
-            </div>
-            <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-          </button>
-
-          <button className="flex items-center justify-between p-4 rounded-xl border border-slate-700 bg-slate-800/50 hover:bg-slate-800 hover:border-slate-600 transition-all group">
-            <div className="flex items-center gap-3">
-              <div className="p-2 bg-purple-900/30 rounded-lg group-hover:bg-purple-900/50 transition-colors">
-                <ImageIcon className="w-5 h-5 text-purple-400" />
-              </div>
-              <div className="text-left">
-                <div className="font-medium text-slate-200">Save Diagram (PNG)</div>
-                <div className="text-xs text-slate-500">Visual data flow map</div>
-              </div>
-            </div>
-            <Download className="w-4 h-4 text-slate-500 group-hover:text-white transition-colors" />
-          </button>
-        </div>
-      </div>
     </div>
+  );
+}
+
+export default function RightPanel() {
+  return (
+    <ReactFlowProvider>
+      <FlowPanel />
+    </ReactFlowProvider>
   );
 }

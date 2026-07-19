@@ -12,14 +12,18 @@
   "dependencies": {
     "@monaco-editor/react": "^4.7.0",
     "@tailwindcss/vite": "^4.3.3",
+    "@types/dagre": "^0.7.54",
     "@xyflow/react": "^12.11.2",
     "autoprefixer": "^10.5.4",
     "clsx": "^2.1.1",
+    "dagre": "^0.8.5",
     "expr-eval": "^2.0.2",
+    "html-to-image": "^1.11.13",
     "lucide-react": "^1.25.0",
     "postcss": "^8.5.19",
     "react": "^19.2.7",
     "react-dom": "^19.2.7",
+    "react-resizable-panels": "^4.12.2",
     "tailwind-merge": "^3.6.0",
     "tailwindcss": "^4.3.3",
     "zustand": "^5.0.14"
@@ -30,6 +34,7 @@
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.0.3",
     "oxlint": "^1.71.0",
+    "puppeteer": "^25.3.0",
     "typescript": "~6.0.2",
     "vite": "^8.1.1"
   }
