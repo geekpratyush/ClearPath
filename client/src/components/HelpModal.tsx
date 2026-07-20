@@ -63,7 +63,7 @@ export default function HelpModal({ onClose }: { onClose: () => void }) {
             {activeTab === 'pipeline' && (
               <div className="space-y-6">
                 <h3 className="text-2xl font-bold text-slate-100 border-b border-slate-800 pb-2">Orchestration Pipeline</h3>
-                <p>The Middle Panel is where you architect the validation flow for your transactions.</p>
+                <p>The Middle Panel is where you architect the validation flow for your business requirements and logic paths.</p>
                 
                 <h4 className="text-lg font-semibold text-indigo-300 mt-4">Managing Stages</h4>
                 <ul className="list-disc pl-5 space-y-2 text-sm">

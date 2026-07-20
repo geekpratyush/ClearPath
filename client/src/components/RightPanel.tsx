@@ -1,7 +1,7 @@
 import { useCallback, useRef, useEffect } from 'react';
 import { useStore, type PipelineStatus } from '../store/useStore';
-import { Play, Image as ImageIcon, FileJson, PlayCircle } from 'lucide-react';
-import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position, useReactFlow, ReactFlowProvider, getNodesBounds, getViewportForBounds } from '@xyflow/react';
+import { Play, Image as ImageIcon, PlayCircle } from 'lucide-react';
+import { ReactFlow, Controls, Background, useNodesState, useEdgesState, MarkerType, Handle, Position, useReactFlow, ReactFlowProvider, getNodesBounds } from '@xyflow/react';
 import { toPng, toSvg } from 'html-to-image';
 import dagre from 'dagre';
 import '@xyflow/react/dist/style.css';
@@ -222,32 +222,23 @@ function FlowPanel() {
     useStore.setState({ isSimulating: false });
   };
 
-  const exportJSON = () => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify({ initialContext, stages }, null, 2));
-    const downloadAnchorNode = document.createElement('a');
-    downloadAnchorNode.setAttribute("href", dataStr);
-    downloadAnchorNode.setAttribute("download", "clearpath-simulation.json");
-    document.body.appendChild(downloadAnchorNode);
-    downloadAnchorNode.click();
-    downloadAnchorNode.remove();
-  };
+
 
   const downloadImage = useCallback((format: 'png' | 'svg' = 'png') => {
     const nodes = getNodes();
     if (nodes.length === 0) return;
     
     const nodesBounds = getNodesBounds(nodes);
-    const imageWidth = Math.max(800, nodesBounds.width + 200);
-    const imageHeight = Math.max(600, nodesBounds.height + 200);
+    // Use 50px padding to ensure rotated shapes (like diamond) and curved edges are not cropped
+    const padding = 50;
+    const imageWidth = nodesBounds.width + padding * 2;
+    const imageHeight = nodesBounds.height + padding * 2;
 
-    const transform = getViewportForBounds(
-      nodesBounds,
-      imageWidth,
-      imageHeight,
-      0.5,
-      2,
-      0.1
-    );
+    const transform = {
+      x: -nodesBounds.x + padding,
+      y: -nodesBounds.y + padding,
+      zoom: 1,
+    };
 
     const viewport = document.querySelector('.react-flow__viewport') as HTMLElement;
     if (!viewport) return;
@@ -274,14 +265,18 @@ function FlowPanel() {
         const a = document.createElement('a');
         a.setAttribute('download', 'pipeline-diagram.png');
         a.setAttribute('href', dataUrl);
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       });
     } else {
       toSvg(viewport, config).then((dataUrl) => {
         const a = document.createElement('a');
         a.setAttribute('download', 'pipeline-diagram.svg');
         a.setAttribute('href', dataUrl);
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
       });
     }
   }, [getNodes, theme]);
@@ -295,15 +290,7 @@ function FlowPanel() {
         </h2>
         
         <div className="flex items-center gap-2 ml-auto">
-          <button 
-            onClick={exportJSON}
-            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 transition-all text-slate-300"
-            title="Export JSON payload"
-          >
-            <FileJson className="w-4 h-4 text-blue-400" />
-            JSON
-          </button>
-          
+
           <button 
             onClick={() => downloadImage('svg')}
             className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium rounded-lg border border-slate-700 bg-slate-800 hover:bg-slate-700 hover:border-slate-600 transition-all text-slate-300"

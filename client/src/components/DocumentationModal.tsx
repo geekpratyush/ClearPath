@@ -65,7 +65,7 @@ export default function DocumentationModal({ onClose }: { onClose: () => void })
               <section className="space-y-6">
                 <h3 className="text-3xl font-bold text-slate-100 border-b border-slate-800 pb-2">System Overview</h3>
                 <p className="text-lg">
-                  ClearPath is a robust financial orchestration platform designed for business analysts and IT users. 
+                  ClearPath is a robust, versatile orchestration platform designed for gathering requirements, defining computational logic, and designing pipeline flows across any domain. 
                   It provides an interactive, drag-and-drop workspace for building and simulating complex business rules without needing back-end deployments.
                 </p>
                 
@@ -86,7 +86,7 @@ export default function DocumentationModal({ onClose }: { onClose: () => void })
               <section className="space-y-6">
                 <h3 className="text-3xl font-bold text-slate-100 border-b border-slate-800 pb-2">ES6 Rules & Pipeline Evaluation</h3>
                 <p className="text-lg">
-                  Every pipeline stage in ClearPath processes its logic using native ES6 (ECMAScript 2015+) syntax. This provides maximum flexibility for writing expressive business logic to validate, transform, and route transactions.
+                  Every pipeline stage in ClearPath processes its logic using native ES6 (ECMAScript 2015+) syntax. This provides maximum flexibility for writing expressive business logic to validate, transform, and route data payloads.
                 </p>
 
                 <h4 className="text-xl font-semibold text-indigo-300 mt-4">1. Accessing & Mutating Context</h4>
@@ -176,7 +176,7 @@ context.enrichedPayload = {
                   
                   <div className="space-y-3">
                     <h4 className="text-lg font-bold text-indigo-400">2. Pipeline Flow (Middle)</h4>
-                    <p className="text-sm">The React Flow visual diagrammer. BAs build their node graphs here to visualize exact transaction paths.</p>
+                    <p className="text-sm">The React Flow visual diagrammer. BAs build their node graphs here to visualize exact logic paths.</p>
                     <img src="real_middle_panel.png" alt="Middle Panel" className="w-full rounded-md shadow-md border border-slate-700" />
                   </div>
 
@@ -257,7 +257,7 @@ context.enrichedPayload = {
                 
                 {/* The actual video / animated image captured via playwright/browser subagent */}
                 <div className="relative">
-                  <img src="demo_v3.webp" alt="Animated Application Demo" className="w-full rounded-lg shadow-2xl border border-indigo-500/30" />
+                  <video src="clearpath_demo.mp4" autoPlay loop muted playsInline className="w-full rounded-lg shadow-2xl border border-indigo-500/30" />
                   <div className="absolute top-2 right-2 bg-indigo-600/90 text-white text-xs font-bold px-2 py-1 rounded backdrop-blur-sm shadow-md">Live Capture</div>
                 </div>
                 
